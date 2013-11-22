@@ -1,4 +1,4 @@
 bioerl
 ======
 
-Bioinformatics
+Bioinformatics in Erlang
