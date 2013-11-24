@@ -231,6 +231,44 @@ aa_name() ->
 	{"Leucine or Isoleucine","Xle",$J},
 	{"Unspecified or unknown amino acid","Xaa",$X}].
 
+%% -------------------------------------------------------------------------- %%
+%% Peptide naming functions                                                   %%
+%% -------------------------------------------------------------------------- %%
+
+peptide_mass_list(Peptides) ->
+	peptide_mass_list(Peptides,[]).
+
+peptide_mass_list([],Acc) ->
+	Acc;
+
+peptide_mass_list([P|Tail],Acc) ->
+	peptide_mass_list(Tail,[peptide_mass_string(P)|Acc]).
+
+peptide_mass_list_uniq(Peptides) ->
+	Str = peptide_mass_list(Peptides),
+	sets:to_list(sets:from_list(Str)).
+
+
+
+%
+% Convert a peptide of amino acid characters to a string of integers corresponding
+% to the mass of the amino acid, separated by "-"
+%
+peptide_mass_string(PString) ->
+	peptide_mass_string(PString,[]).
+
+peptide_mass_string([],Acc) ->
+	lists:flatten(Acc);
+
+% this is ug-ley:
+peptide_mass_string([H|[]],Acc) when is_integer(H) ->
+	peptide_mass_string([],Acc ++ [integer_to_list(mass(H))]);
+peptide_mass_string([H,N|[]],Acc) when is_integer(H), is_integer(N) ->
+	peptide_mass_string([],Acc ++ [integer_to_list(mass(H)),$-,integer_to_list(mass(N))]);
+peptide_mass_string([H,N|Tail],Acc) when is_integer(H), is_integer(N) ->
+	peptide_mass_string(Tail,Acc ++ [integer_to_list(mass(H)),$-,integer_to_list(mass(N)),$-]).
+
+
 
 %% -------------------------------------------------------------------------- %%
 %% Peptide encoding                                                           %%
@@ -339,15 +377,54 @@ print_cyclo_spectrum(PString) ->
 %
 % Calculate the theoretical spectrum of a cyclical peptide String
 % [ 0 , m1, m2, .. mn, mass(P) ]
+% InclPeptide == true includes peptide in list
 %
 cyclo_spectrum(PString) ->
-	cyclo_spectrum(cyclic_perm(PString),[mass(PString)]).
+	cyclo_spectrum(PString,false).
 
-cyclo_spectrum([H|Tail],Acc) ->
-	cyclo_spectrum(Tail,[mass(H)|Acc]);
+cyclo_spectrum(PString,InclPeptide) ->
+	case InclPeptide of
+		true -> cyclo_spectrum(cyclic_perm(PString),[{PString,mass(PString)}],true);
+		_ -> cyclo_spectrum(cyclic_perm(PString),[mass(PString)],InclPeptide)
+	end.
 
-cyclo_spectrum([],Acc) ->
+cyclo_spectrum([H|Tail],Acc,true) ->
+	cyclo_spectrum(Tail,[{H, mass(H)}|Acc],true);
+
+cyclo_spectrum([H|Tail],Acc,InclPeptide) ->
+	cyclo_spectrum(Tail,[mass(H)|Acc],InclPeptide);
+
+cyclo_spectrum([],Acc,true) ->
+	lists:keysort(2,[{zero,0} | Acc]);
+cyclo_spectrum([],Acc,_InclPeptide) ->
 	lists:sort([0 | Acc]).
+
+
+%
+% Calculate the theoretical spectrum of a linear peptide String
+% InclPeptide == true includes peptide in list
+%
+
+lin_spectrum(PString) ->
+	lin_spectrum(PString,false).
+
+lin_spectrum(PString,InclPeptide) ->
+	case InclPeptide of
+		true -> lin_spectrum(linear_perm(PString),[{PString,mass(PString)}],true);
+		_ -> lin_spectrum(linear_perm(PString),[mass(PString)],InclPeptide)
+	end.
+
+lin_spectrum([H|Tail],Acc,true) ->
+	lin_spectrum(Tail,[{H, mass(H)}|Acc],true);
+
+lin_spectrum([H|Tail],Acc,InclPeptide) ->
+	lin_spectrum(Tail,[mass(H)|Acc],InclPeptide);
+
+lin_spectrum([],Acc,true) ->
+	lists:keysort(2,[{zero,0} | Acc]);
+lin_spectrum([],Acc,_InclPeptide) ->
+	lists:sort([0 | Acc]).
+
 
 %
 % Get all ordered substrings, cyclic search
@@ -363,6 +440,27 @@ cyclic_perm(String,Pos,Acc) ->
 	Str = get_subst_wrap(String,Pos,length(String)-1),
 	cyclic_perm(String,Pos-1,Str ++ Acc).
 
+
+linear_perm(String) ->
+	linear_perm(String,length(String),[]).
+
+linear_perm(_,0,Acc) ->
+	Acc;
+
+linear_perm(String,Pos,Acc) ->
+	Str = get_subst(String,Pos),
+	linear_perm(String,Pos-1,Str ++ Acc).
+
+%
+% Get all substring from String starting at pos StartPos
+%
+get_subst(String,StartPos) ->
+	get_subst(String,StartPos,1,length(String),[]).
+
+get_subst(String,Pos,Len,MaxLen,Acc) when Len+Pos > MaxLen+1 ->
+	lists:reverse(lists:delete(String,Acc)); % we will not include the whole string
+get_subst(String,Pos,Len,MaxLen,Acc) when Pos+Len =< MaxLen+1 ->
+	get_subst(String,Pos,Len+1,MaxLen,[lists:sublist(String,Pos,Len) | Acc]).
 
 %
 % Get all substrings up to length MaxLen from position StartPos.
@@ -391,14 +489,121 @@ get_subst_wrap(String,Pos,Len,MaxLen,Acc) when Len =< MaxLen, Pos+Len > length(S
 
 
 
+%
+% Cyclopeptide sequencing
+%
+
+print_cyclopeptide_seq(Spec) ->
+	Candidates = cyclopeptide_seq(Spec),
+	lists:foreach(fun(El) -> io:format("~s ",[El]) end, peptide_mass_list_uniq(Candidates)).
+
+
+cyclopeptide_seq(Spec) ->
+	cyclopeptide_seq(Spec,expand_peptide(""),[]).
+
+
+cyclopeptide_seq(Spec,List,Acc) ->
+	NewList = lists:filter(
+			fun (Peptide) ->
+				consistent_spectrum(lin_spectrum(Peptide),Spec) % remove all peptides not consistens with spectrum
+			end,
+			List
+		),
+	 % divide in two lists, one satisfying Cyclospectrum(Peptide) == Spec and one with the peptides that is
+	 % consistent with spectrum Spec.
+	{Acc2,NewList2} = lists:partition(
+			fun(Peptide) ->
+				case cyclo_spectrum(Peptide) of
+					Spec ->
+						true; 
+					_ ->
+						false
+				end
+			end,
+			NewList 
+		),
+	NewAcc = Acc2 ++ Acc,
+	case NewList2 of
+		[] -> NewAcc;
+		_ -> cyclopeptide_seq(Spec,expand_peptide_list(NewList2),NewAcc)
+	end.
+
+
+expand_peptide_list(PList) ->
+	expand_peptide_list(PList,[]).
+
+expand_peptide_list([H|Tail],Acc) ->
+	expand_peptide_list(Tail,Acc ++ expand_peptide(H));
+
+expand_peptide_list([],Acc) ->
+	Acc.
+
+expand_peptide(PString) ->
+	[lists:append(PString,[$G]),
+	lists:append(PString,[$A]),
+	lists:append(PString,[$S]),
+	lists:append(PString,[$P]),
+	lists:append(PString,[$V]),
+	lists:append(PString,[$T]),
+	lists:append(PString,[$C]),
+	lists:append(PString,[$I]),
+	lists:append(PString,[$L]),
+	lists:append(PString,[$N]),
+	lists:append(PString,[$D]),
+	lists:append(PString,[$K]),
+	lists:append(PString,[$Q]),
+	lists:append(PString,[$E]),
+	lists:append(PString,[$M]),
+	lists:append(PString,[$H]),
+	lists:append(PString,[$F]),
+	lists:append(PString,[$R]),
+	lists:append(PString,[$Y]),
+	lists:append(PString,[$W])].
+
+
+%
+% Is the (linear peptide theoretical) spectrum cosisten with (cyclical peptide experimental) 
+% spectrum SpecB
+%
+consistent_spectrum([M|SpecATail],SpecB) ->
+	OccA = find_occurences(M,SpecATail) + 1, % count this occurence
+	OccB = find_occurences(M,SpecB),
+	case OccA of
+		S when S =< OccB ->
+			consistent_spectrum(SpecATail,SpecB);
+		_ ->
+			false
+	end;
+
+consistent_spectrum([],_) ->
+	true.
 
 
 
 
+% Find number of occurences of element El in List
+find_occurences(El,List) ->
+	find_occurences(El,List,0).
+
+find_occurences(El,[El|Tail],Count) ->
+	find_occurences(El,Tail,Count+1);
+
+find_occurences(El,[_H|Tail],Count) ->
+	find_occurences(El,Tail,Count); 
+
+find_occurences(_El,[],Count) ->
+	Count.
 
 
+%
+% Test data
+%
+
+leqn() -> [0, 113, 114, 128, 129, 227, 242, 242, 257, 355, 356, 370, 371, 484].
 
 
+tyrocidine_b1() ->
+ [0, 97,99,113,114,128,128,147,147,163,186,227,241,242,244,260,261,262,283,291,333,340,357,388,389,390,390,405,430,430,447,485,487,503,504,518,543,544,552,575,577,584,631,632,650,651,671,672,690,691,738,745,747,770,778,779,804,818,819,835,837,875,892,892,917,932,932,933,934,965,982,989,1031,1039,1060,1061,1062,1078,1080,1081,1095,1136,1159,1175,1175,1194,1194,1208,1209,1223,1225,1322].
 
 
 
