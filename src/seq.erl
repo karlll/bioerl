@@ -1,3 +1,7 @@
+%
+% 2013-11-24 karlll <karl@ninjacontrol.com>
+%
+
 -module(seq).
 
 -compile([export_all]).
@@ -485,13 +489,10 @@ get_subst_wrap(String,Pos,Len,MaxLen,Acc) when Len =< MaxLen, Pos+Len > length(S
 
 
 
+%% -------------------------------------------------------------------------- %%
+%%  Cyclopeptide sequencing                                    				  %%
+%% -------------------------------------------------------------------------- %%
 
-
-
-
-%
-% Cyclopeptide sequencing
-%
 
 print_cyclopeptide_seq(Spec) ->
 	Candidates = cyclopeptide_seq(Spec),
@@ -565,6 +566,7 @@ expand_peptide(PString) ->
 % Is the (linear peptide theoretical) spectrum cosisten with (cyclical peptide experimental) 
 % spectrum SpecB
 %
+
 consistent_spectrum([M|SpecATail],SpecB) ->
 	OccA = find_occurences(M,SpecATail) + 1, % count this occurence
 	OccB = find_occurences(M,SpecB),
@@ -577,8 +579,6 @@ consistent_spectrum([M|SpecATail],SpecB) ->
 
 consistent_spectrum([],_) ->
 	true.
-
-
 
 
 % Find number of occurences of element El in List
@@ -594,16 +594,6 @@ find_occurences(El,[_H|Tail],Count) ->
 find_occurences(_El,[],Count) ->
 	Count.
 
-
-%
-% Test data
-%
-
-leqn() -> [0, 113, 114, 128, 129, 227, 242, 242, 257, 355, 356, 370, 371, 484].
-
-
-tyrocidine_b1() ->
- [0, 97,99,113,114,128,128,147,147,163,186,227,241,242,244,260,261,262,283,291,333,340,357,388,389,390,390,405,430,430,447,485,487,503,504,518,543,544,552,575,577,584,631,632,650,651,671,672,690,691,738,745,747,770,778,779,804,818,819,835,837,875,892,892,917,932,932,933,934,965,982,989,1031,1039,1060,1061,1062,1078,1080,1081,1095,1136,1159,1175,1175,1194,1194,1208,1209,1223,1225,1322].
 
 
 
