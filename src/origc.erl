@@ -230,7 +230,7 @@ print_approx_match(Pattern,String,Mismatches) ->
 write_approx_match_positions(Pattern,String,Mismatches) ->
 	ApproxMatches = approx_match(Pattern,String,Mismatches),
 	ResultStr = lists:map(fun(El) -> {Pos,_,_} = El, io_lib:fwrite("~p ", [Pos]) end, ApproxMatches),
-	write_result(lists:flatten(ResultStr),"out.result").
+	util:write_result(lists:flatten(ResultStr),"out.result").
 
 %
 % Find all patterns in string String which has at most Mismatches differences
@@ -270,31 +270,6 @@ count_mismatch([H|Tail1],[H|Tail2],Count) ->
 	count_mismatch(Tail1,Tail2,Count);
 count_mismatch([_H|Tail1],[_N|Tail2],Count)  ->
 	count_mismatch(Tail1,Tail2,Count+1).
-
-
-
-
-%% -------------------------------------------------------------------------- %%
-%% Utility functions                                                          %%
-%% -------------------------------------------------------------------------- %%
-
-write_result(Result,Filename) ->
-	file:write_file(Filename, io_lib:fwrite("~p.\n", [Result])).
-
-load_string(FileName) ->
-	V = load_binary_string(FileName),
-	L = binary_to_list(V),
-	string:strip(L,both,$\n).
-
-load_binary_string(FileName) ->
-	{ok, BinaryString} = file:read_file(FileName),
-	BinaryString.
-	
-
-
-
-
-
 
 
 
