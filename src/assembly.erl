@@ -112,7 +112,7 @@ suffix([H|Tail]) ->
 
 
  test_debruijn_graph() ->
- 	L = get_dbgraph_adj_list(get_input("in.txt")),
+ 	L = get_dbgraph_adj_list(util:get_input("in.txt")),
  	util:write_result_text(L,"res.txt").
  
 
@@ -187,7 +187,7 @@ get_edge_kmer([H1|T1],N2) ->
 % Read an adjecency list from in.txt, output an eulerian path to res.txt
 % Precond: Graph has an eulerian path.
 test_eulerian_path() ->
-	G = build_graph(get_input("in.txt")),
+	G = build_graph(util:get_input("in.txt")),
 	util:write_result_text(string:join(find_path(G,path),"->"),"res.txt").
 
 % Get the directed graph defined by AdjStrings, ["Node1->Node2,Node3"]
@@ -307,34 +307,4 @@ select_startnode(G,cycle) ->
 	lists:nth(random:uniform(length(Nodes)),Nodes).
 
 
-
-%% -------------------------------------------------------------------------- %%
-%% Util                                                                       %%
-%% -------------------------------------------------------------------------- %%
-
-
-get_input(Filename) ->
-	{ok, F} = file:open(Filename,[read]),
-	L = read_input(F),
-	get_input(L,[]).
-
-get_input(["Input:\n"|T],Acc) ->
-	get_input(T,Acc);
-get_input(["Input\n"|T],Acc) ->
-	get_input(T,Acc);
-get_input(["Output:\n"|T],Acc) ->
-	Acc;
-get_input(["Output\n"|T],Acc) ->
-	Acc;
-get_input([],Acc) ->
-	Acc;
-get_input([L|T], Acc) ->
-	get_input(T,[string:strip(L,right,$\n)|Acc]).
-
-
-read_input(File) ->
-    case file:read_line(File) of
-        eof        -> [];
-        {ok, Line} -> [Line | read_input(File)]
-    end.
 
