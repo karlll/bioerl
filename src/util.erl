@@ -60,7 +60,7 @@ read_input(File) ->
 
 %
 % matrix, M x N (Row-Col)
-%
+% TODO: implement using stdlib array instead
 
 
 new_mx(M,N) ->
@@ -109,6 +109,35 @@ mx_col_at(N,RowList) ->
 % return Mth row vector in matrix. Zero based.
 mx_row_at(M,RowList) ->
 	lists:nth(M+1,RowList).
+
+% Return maximum element along with its position in matrix Mx; {Value,I,J}
+mx_max(Mx) ->
+	MxN = lists:zip(Mx,lists:seq(0,length(Mx)-1)),
+	Max = lists:map(fun(M)->{R,I} = M,{MaxV,J} = mx_max_vector(R),{MaxV,I,J} end,MxN),
+	Res = lists:last(lists:keysort(1,Max)),
+	Res.
+
+% Get max value and its position in vector; {MaxValue,Pos}
+mx_max_vector(V) ->
+	mx_max_vector(V,0,{-1,-1}).
+
+mx_max_vector([],_I,Max) ->
+	case Max of
+		{-1,-1} ->
+			none;
+		_ ->
+			Max
+	end;
+
+mx_max_vector([H|T],I,Max) ->
+	{MaxV,_} = Max,
+	NewMax = case H of
+		H when H > MaxV ->
+			{H,I};
+		_ ->
+			Max
+	end,
+	mx_max_vector(T,I+1,NewMax).
 
 
 %
