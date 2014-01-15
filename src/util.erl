@@ -27,11 +27,6 @@ load_binary_string(FileName) ->
 	{ok, BinaryString} = file:read_file(FileName),
 	BinaryString.
 	
-
-
-
-
-
 get_input(Filename) ->
 	{ok, F} = file:open(Filename,[read]),
 	L = read_input(F),
@@ -56,7 +51,27 @@ read_input(File) ->
         {ok, Line} -> [Line | read_input(File)]
     end.
 
+% Read a string containing multiple permutations (see below)
+parse_perm_strs(PermStrs) ->
+	lists:map(fun(D) -> parse_perm_str(D) end, string:tokens(PermStrs,")")).
 
+% Read a string in the form (+1 -2 +3 ... +N) and return a list
+% of a integers
+parse_perm_str(PermStr) ->
+	lists:map(fun(D) -> {N,_} = string:to_integer(D), N end,
+		string:tokens(PermStr,"() ")).
+
+list_to_perm_str(List) ->
+	S = lists:map(fun(D) -> 
+		case D of
+			D when D > 0 ->
+				"+"++ integer_to_list(D);
+			D2 ->
+				integer_to_list(D2)
+		end
+	end,
+	List),
+	"(" ++ string:join(S," ") ++ ")".
 
 %
 % matrix, M x N (Row-Col)
@@ -166,12 +181,27 @@ idx(El,[_H|T],Idx) ->
 idx(_El,[],_Idx) ->
 	not_found.
 
+idx_abs(El,List) ->
+	idx_abs(El,List,1).
+idx_abs(El,[H|T],Idx) when is_integer(El), is_integer(H) ->
+	AbsE = abs(El),
+	AbsH = abs(H),
+	case AbsH of
+		AbsE ->
+			Idx;
+		_ ->
+			idx_abs(El,T,Idx+1)
+	end;
+idx_abs(_El,[],_Idx) ->
+	not_found.
+
+
 % pop list until head is element El
 pop_until(El,[El|T]) ->
 	[El|T];
 pop_until(_El,[]) ->
 	[];
-pop_until(El,[H|T]) ->
+pop_until(El,[_H|T]) ->
 	pop_until(El,T).
 
 
@@ -183,13 +213,23 @@ sublist2(StartEl,EndEl,List) ->
 	lists:sublist(List,StartIdx,EndIdx-StartIdx+1).
 
 
+%
+% Undirected graph
+%
 
+% udg_new(NodeList) -> Graph G
+udg_new(Nodes) ->
+	N = length(Nodes),
+	NL = lists:zip(lists:seq(0,N-1),Nodes),
+	AdjM = new_mx(N,N),
+	{NL,AdjM}.
 
-
-
-
-
-
+% udg_add_edge(G,N1,N2) -> G'
+udg_add_edge(G,NodeA,NodeB) ->
+	{NL,AdjM} = G, 
+	{NAp,NodeA} = lists:keyfind(NodeA,2,NL),
+	{NBp,NodeB} = lists:keyfind(NodeB,2,NL),
+	{NL, mx(NBp,NAp,1,mx(NAp,NBp,1,AdjM))}. 
 
 
 
