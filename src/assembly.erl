@@ -2,6 +2,10 @@
 % 2013-12-03 karlll <karl@ninjacontrol.com>
 %
 
+%
+% Genome assembly
+%
+
 -module(assembly).
 -compile([export_all]).
 

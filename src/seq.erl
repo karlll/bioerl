@@ -2,6 +2,10 @@
 % 2013-11-24 karlll <karl@ninjacontrol.com>
 %
 
+%
+% Sequencing
+%
+
 -module(seq).
 
 -compile([export_all]).
@@ -593,86 +597,6 @@ find_occurences(El,[_H|Tail],Count) ->
 
 find_occurences(_El,[],Count) ->
 	Count.
-
-
-
-%
-% Leaderboard cyclopeptide sequencing
-%
-
-
-
-% LEADERBOARDCYCLOPEPTIDESEQUENCING(Spectrum, N)
-%     Leaderboard ← {0-peptide}
-%     LeaderPeptide ← 0-peptide
-%     while Leaderboard is non-empty
-%         Leaderboard ← Expand(Leaderboard)
-%         for each Peptide in Leaderboard
-%             if Mass(Peptide) = ParentMass(Spectrum)
-%                 if Score(Peptide, Spectrum) > Score(LeaderPeptide, Spectrum)
-%                     LeaderPeptide ← Peptide
-%             else if Mass(Peptide) > ParentMass(Spectrum)
-%                 remove Peptide from Leaderboard
-%         Leaderboard ← Cut(Leaderboard, Spectrum, N)
-%     output LeaderPeptide
-
-
-% score()
-
-leaderboard_cyclopeptide_seq(Spec, N) ->
-	leaderboard_cyclopeptide_seq(Spec,N,"",expand_peptide(""),[]). % Leader: 0-peptide, LeaderBoard: [0-peptide]
-
-
-leaderboard_cyclopeptide_seq(Spec,N,LeaderPeptide,LeaderBoard,Acc) ->
-	ParentMass = lists:last(Spec),
-	NewBoard1 = lists:filter(fun(El) -> mass(El) =< ParentMass end, LeaderBoard), % filter all masses larger than ParentMass(Spectrum)
-	NewLeader = lists:foldl(
-			fun(El,CurrentLeader) -> 
-				case mass(El) of 
-					M when M = ParentMass ->
-						case score(El,Spec) of
-							S when S > score(CurrentLeader,Spec) ->
-								El;
-							_ ->
-								CurrentLeader
-						end;
-					_ ->
-						CurrentLeader
-				end,
-				LeaderPeptide,
-				LeaderBoard
-			),
-	NewBoard2 = cut(LeaderBoard,Spectrum,N),
-	case NewBoard2 of
-		[] ->
-			NewLeader;
-		_ -> 
-			leaderboard_cyclopeptide_seq(Spec,N,NewLeader,expand_peptide_list(LeaderBoard),[])
-	end.
-
-
-
-cut(Board,Spec,N) ->
-	ScoreBoard = score_list(Board,Spec),
-	SortedBoard = lists:keysort(1,ScoreBoard),
-	cut_board(SortedBoard,N,[]).
-
-cut_board([{A,X},{A,Y}|T],N,Acc) ->
-	cut_board(T,N,)
-	
-
-score_list(Board,Spec) ->
-	lists:map(fun(El) -> {score(El,Spec),El} end, Board).
-
-
-
-
-
-
-
-
-
-
 
 
 

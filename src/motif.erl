@@ -249,14 +249,12 @@ prof_prob_kmer(String,K,PMatrix,ColMap) when K =:= length(PMatrix) ->
 
 
 get_kmer_prob(Kmer,PMatrix,ColMap) ->
-    %io:format("Kmer = ~s ",[Kmer]),
     get_kmer_prob(Kmer,1,PMatrix,ColMap,1).
+
 get_kmer_prob([],_N,_PMatrix,_ColMap,Acc) ->
-    %io:format(" = ~p~n",[Acc]),
     Acc;
 get_kmer_prob([K|Ktail],N,PMatrix,ColMap,Acc) ->
     P = pmatrix(K,N,ColMap,PMatrix),
-    %io:format("~p ",[P]),
     get_kmer_prob(Ktail,N+1,PMatrix,ColMap,Acc * P).
             
 
